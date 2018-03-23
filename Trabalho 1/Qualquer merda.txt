@@ -1,0 +1,17 @@
+
+#DEFINE MAX_SIZE 100 // Tamanho máximo de string = 100 caracteres, incluindo o \0
+char cmd[3] // Leitura de comandos para futuro parseamento deles
+char fetchInputString[MAX_SIZE]; // Input de strings, crucial para o funcionando de algumas funções
+
+Verificar, para cada linha, por meio de um fscanf("%s", cmd), o comando a ser utilizado:
+
+char strAux[MAX_SIZE];
+
+strcmp(cmd[0], "+") == 0
+    strcmp(cmd[1], "x") == 0
+        char *xAux = malloc((strlen(x) + 1) * sizeof(char));
+        strcpy(x, xAux);
+        free(x);
+        fgets() // Lê até o final da linha
+    strcmp(cmd[1], "y") == 0
+    strcmp(cmd[1], "z") == 0
