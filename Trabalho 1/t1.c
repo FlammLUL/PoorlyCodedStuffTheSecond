@@ -22,7 +22,7 @@ typedef struct FILES Files;
 
 // Funções: utilidades
 void removeLineAtBufferEnd(char*);
-void removeDoubleQuotes(char**, char);
+void removeCharFromString(char**, char);
 int ctoi(char);
 
 // Funções: comandos (é muito bom não saber que parâmetro é o que aqui)
@@ -71,10 +71,15 @@ int main(int argc, char **argv){
             }
         }
     }
-    
+
     // Ponteiros para potencial modificação posterior
     char *dirPathPointer = dirPath;
     char *defaultDirPathPointer = argv[3];
+
+    // Remover o ponto inicial da string
+    removeCharFromString(&dirPathPointer, '.');
+
+    // Realização dos comandos...
     doCommands(input, commandLineParameter[0], commandLineParameter[1], commandLineParameter[2], dirPathPointer, defaultDirPathPointer);
     return 0;
 }
@@ -83,7 +88,7 @@ int main(int argc, char **argv){
 void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, char *defaultDirPointer){
     // Inicialização de variáveis x, y, z
     char *xVar = "", *yVar = "", *zVar = "";
-    
+
     // Arrays para nome de arquivo extensão e seus respectivos ponteiros para potencial modificação posterior
     char fileName[STRING_MAX_SIZE]; char *namePointer = fileName;
     char fileExt[STRING_MAX_SIZE]; char *extPointer = fileExt;
@@ -95,18 +100,18 @@ void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, cha
     // Um char que armazena o whitespace " " após um comando/argumento (no caso de existir um segundo argumento)
     // para evitar criar uma função que retirasse o 'leading whitespace' de uma string
     char removeLeadingWhitespace;
-    
+
     // ID de um arquivo
     int id;
 
     // Armazenador do comando a ser lido toda linha
     char command[3];
-    
+
     // Loop para a seleção e realização dos comandos
     while(fscanf(input, "%s", command) != EOF){
         // Apenas com função de debug
         printf("%s ", command);
-        
+
         // Funções de concatenação...
         if(strcmp(command, "+x") == 0){
             concatenateVariableNormal(&xVar, input, p1, p2, p3);
@@ -137,6 +142,7 @@ void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, cha
             // Configurar a extensão do arquivo
             case 'e':
                 setExtension(&extPointer, input, xVar, yVar, zVar);
+                break;
             // Criar um arquivo com um ID no diretório padrão
             case 'c':
                 fscanf(input, "%d", &id);
@@ -151,7 +157,7 @@ void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, cha
             case 'l':
                 fscanf(input, "%d", &id);
                 readFile(files, id);
-                break;      
+                break;
             // Abrir um arquivo para escrita (write) de uma string sem aspas duplas a delimitando e terminada pelo caracter '$'
             case 'w':
                 fscanf(input, "%d", &id);
@@ -183,7 +189,7 @@ void concatenateVariableNormal(char **var, FILE *input, char *p1, char *p2, char
     // A função que retira o argumento dessa função
     char toBeConcatenated[STRING_MAX_SIZE];
     fgets(toBeConcatenated, STRING_MAX_SIZE, input);
-    
+
     // Retirar o caracter '\n' (new line) do final da string
     toBeConcatenated[strcspn(toBeConcatenated, "\n")] = 0;
 
@@ -192,7 +198,7 @@ void concatenateVariableNormal(char **var, FILE *input, char *p1, char *p2, char
 
     // Tamanho da variável (x, y ou z) para posterior utilização na alocação de memória
     int varSize = strlen(*var);
-    
+
     // String auxiliar para cópia e posterior concatenação.
     char dummyString[STRING_MAX_SIZE];
 
@@ -200,24 +206,24 @@ void concatenateVariableNormal(char **var, FILE *input, char *p1, char *p2, char
     if(strcmp(toBeConcatenated, "@1") == 0){
         // Tamanho para alocação de memória posterior
         int pSize = strlen(p1);
-        
+
         // Temporário, será retirado mais tarde
         printf("varSize: %d \tpSize: %d\n", varSize, pSize);
-        
+
         // Faz uma cópia da variável
         strcpy(dummyString, *var);
-        
+
         // Libera toda a memória alocada para a variável e a realoca, incluindo um espaço extra para o caracter de finalização de uma string '\0'
         free(*var);
         *var = malloc((pSize + varSize + 1) * sizeof(char));
-        
+
         // O processo inverso ocorre: a string auxiliar é copiada para o endereço da variável, que é concatenada com o parâmetro correspondente
         strcpy(*var, dummyString);
         strcat(*var, p1);
-        
+
         // Mais uma vez, um testezinho
         printf("Test: %s\n", *var);
-        
+
         // Por fim, retorna
         return;
     // E o mesmo processo é repetido duas vezes
@@ -245,8 +251,8 @@ void concatenateVariableNormal(char **var, FILE *input, char *p1, char *p2, char
     } else {
         // Criando um ponteiro que aponta para a string e removendo as suas aspas duplas
         char *p = toBeConcatenated;
-        removeDoubleQuotes(&p, '\"');
-        
+        removeCharFromString(&p, '\"');
+
         // E repetimos o mesmo processo
         int pSize = strlen(toBeConcatenated);
         strcpy(dummyString, *var);
@@ -299,7 +305,7 @@ void concatenateVariableSpecial(char **var, FILE *input, char *p1){
     } else {
         // Função para remover as aspas de uma string
         char *p = toBeConcatenated;
-        removeDoubleQuotes(&p, '\"');
+        removeCharFromString(&p, '\"');
         int pSize = strlen(toBeConcatenated);
         strcpy(dummyString, *var);
         free(*var);
@@ -326,14 +332,15 @@ void setCurrentDirectory(FILE* input, char **path, char **defaultPath, char *x, 
 
     if(strcmp(dirArg, "#x") == 0){
         strcpy(*path, x);
-    } else if(strcmp(dirArg, "#y")){
+    } else if(strcmp(dirArg, "#y") == 0){
         strcpy(*path, y);
-    } else if(strcmp(dirArg, "#z")){
+    } else if(strcmp(dirArg, "#z") == 0){
         strcpy(*path, z);
     } else {
         strcpy(*path, dirArg);
     }
     // Função para remover ocorrências de barras duplas ("//")
+    removeCharFromString(path, '.');
     printf("%s\n", *path);
 }
 
@@ -344,15 +351,15 @@ void setFileName(char **fileName, FILE* input, char *x, char *y, char *z){
     fgets(nameArg, STRING_MAX_SIZE, input);
     nameArg[strcspn(nameArg, "\n")] = 0;
 
-    if(strcmp(nameArg, "#x")){
+    if(strcmp(nameArg, "#x") == 0){
         strcpy(*fileName, x);
-    } else if(strcmp(nameArg, "#y")){
+    } else if(strcmp(nameArg, "#y") == 0){
         strcpy(*fileName, y);
-    } else if(strcmp(nameArg, "#z")){
+    } else if(strcmp(nameArg, "#z") == 0){
         strcpy(*fileName, z);
     } else {
         char *argPointer = nameArg;
-        removeDoubleQuotes(&argPointer, '\"');
+        removeCharFromString(&argPointer, '\"');
         strcpy(*fileName, argPointer);
     }
     printf("%s\n", *fileName);
@@ -365,15 +372,15 @@ void setExtension(char **fileExt, FILE* input, char *x, char *y, char *z){
     fgets(extArg, STRING_MAX_SIZE, input);
     extArg[strcspn(extArg, "\n")] = 0;
 
-    if(strcmp(extArg, "#x")){
+    if(strcmp(extArg, "#x") == 0){
         strcpy(*fileExt, x);
-    } else if(strcmp(extArg, "#y")){
+    } else if(strcmp(extArg, "#y") == 0){
         strcpy(*fileExt, y);
-    } else if(strcmp(extArg, "#z")){
+    } else if(strcmp(extArg, "#z") == 0){
         strcpy(*fileExt, z);
     } else {
         char *extPointer = extArg;
-        removeDoubleQuotes(&extPointer, '\"');
+        removeCharFromString(&extPointer, '\"');
         strcpy(*fileExt, extPointer);
     }
     printf("%s\n", *fileExt);
@@ -381,14 +388,18 @@ void setExtension(char **fileExt, FILE* input, char *x, char *y, char *z){
 
 void createFile(Files f[10], int id, char **path, char **fileName, char **extName){
     char dummyString[STRING_MAX_SIZE];
+
     strcpy(dummyString, *path);
     strcat(dummyString, *fileName);
     strcat(dummyString, ".");
     strcat(dummyString, *extName);
 
     f[id].filePointer = fopen(dummyString, "w");
+    if(!f[id].filePointer){
+        perror("fopen");
+    }
     strcpy(f[id].filePath, dummyString);
-    printf("%d %s\n", id, f[id].filePath);
+    printf("%d (Path: \"%s\")\n", id, f[id].filePath);
 }
 
 void openFile(Files f[10], int id, char **path, char **fileName, char **extName){
@@ -458,7 +469,7 @@ void closeFile(Files f[10], int id){
 //          Utilidades           //
 ///////////////////////////////////
 
-void removeDoubleQuotes(char **str, char c){
+void removeCharFromString(char **str, char c){
     char *pRead = *str, *pWrite = *str;
     while(*pRead){
         *pWrite = *pRead++;
@@ -469,4 +480,26 @@ void removeDoubleQuotes(char **str, char c){
 
 int ctoi(char c){
     return c - '0';
+}
+
+void mkpath(char *path){
+    char p[STRING_MAX_SIZE];
+    char pFull[STRING_MAX_SIZE];
+
+    strcpy(p, path);
+    char *pPointer = strtok(p, "/")
+
+    int c = 0;
+
+    while(pPointer != NULL){
+        if(c != 1){
+            c == 1;
+            strcpy(pFull, p);
+        } else {
+            strcat(pFull, "/");
+            strcat(pFull, p);
+        }
+        //
+    }
+    strcpy(p, path);
 }
