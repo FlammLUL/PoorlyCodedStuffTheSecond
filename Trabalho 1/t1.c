@@ -3,12 +3,12 @@
 #include <stdlib.h>
 
 #define STRING_MAX_SIZE 500
-// Tamanho m�ximo de uma string
+// Tamanho máximo de uma string
 
 /*
     Pensando um pouco melhor,
-    acho que dava pra ter feito os par�metros tudo dentro de uma struct
-    pra n�o fazer fun��es com 20 par�metros, mas ok.
+    acho que dava pra ter feito os parâmetros tudo dentro de uma struct
+    pra não fazer funções com 20 parâmetros, mas ok.
     Muito tarde para mudar.
 */
 
@@ -20,12 +20,12 @@ struct FILES{
 
 typedef struct FILES Files;
 
-// Fun��es: utilidades
+// Funções: utilidades
 void removeLineAtBufferEnd(char*);
 void removeDoubleQuotes(char**, char);
 int ctoi(char);
 
-// Fun��es: comandos
+// Funções: comandos (é muito bom não saber que parâmetro é o que aqui)
 void doCommands(FILE*, char*, char*, char*, char*, char*);
 void concatenateVariableNormal(char**, FILE*, char*, char*, char*);
 void concatenateVariableSpecial(char**, FILE*, char*);
@@ -42,19 +42,19 @@ void closeFile(Files[10], int);
 
 
 int main(int argc, char **argv){
-    FILE *input;
+    FILE *input; // Arquivo de entrada ditado pelo argumento da linha de comando -f [inputDir]
     char dirPath[STRING_MAX_SIZE];
     char commandLineParameter[3][STRING_MAX_SIZE]; // @1 = [0], @2 = [1]; @3 = [2]
 
-    // Inicializando os par�metros @1, @2 e @3 como \0
+    // Inicializando os parâmetros @1, @2 e @3 como \0
     for(int i = 0; i < 3; i++){
         commandLineParameter[i][0] = '\0';
     }
 
     input = fopen(argv[2], "r"); // Abrindo o arquivo de entrada
-    int parameterIndex = 0;
+    int parameterIndex = 0; // Parâmetros para pegar @1, @2 e @3
 
-    // Verificando se a op��o "-o" existe e, posteriormente, pegando os par�metros
+    // Verificando se a opção "-o" existe e, posteriormente, pegando os parâmetros
     if(strcmp(argv[2], "-o") == 0){
         strcpy(dirPath, argv[3]);
         for(int i = 5; i < argc; i++){
@@ -71,29 +71,43 @@ int main(int argc, char **argv){
             }
         }
     }
-
+    
+    // Ponteiros para potencial modificação posterior
     char *dirPathPointer = dirPath;
     char *defaultDirPathPointer = argv[3];
     doCommands(input, commandLineParameter[0], commandLineParameter[1], commandLineParameter[2], dirPathPointer, defaultDirPathPointer);
     return 0;
 }
 
-/*
-    Parseador de comandos
-*/
+// Command parser: análise dos comandos e leitura de argumentos, caso necessário
 void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, char *defaultDirPointer){
+    // Inicialização de variáveis x, y, z
     char *xVar = "", *yVar = "", *zVar = "";
+    
+    // Arrays para nome de arquivo extensão e seus respectivos ponteiros para potencial modificação posterior
     char fileName[STRING_MAX_SIZE]; char *namePointer = fileName;
     char fileExt[STRING_MAX_SIZE]; char *extPointer = fileExt;
 
+    // Array de files
     Files files[10];
 
+    // Sim, isso é o cúmulo da preguiça
+    // Um char que armazena o whitespace " " após um comando/argumento (no caso de existir um segundo argumento)
+    // para evitar criar uma função que retirasse o 'leading whitespace' de uma string
     char removeLeadingWhitespace;
+    
+    // ID de um arquivo
     int id;
 
+    // Armazenador do comando a ser lido toda linha
     char command[3];
+    
+    // Loop para a seleção e realização dos comandos
     while(fscanf(input, "%s", command) != EOF){
+        // Apenas com função de debug
         printf("%s ", command);
+        
+        // Funções de concatenação...
         if(strcmp(command, "+x") == 0){
             concatenateVariableNormal(&xVar, input, p1, p2, p3);
         } else if(strcmp(command, "+y") == 0){
@@ -102,6 +116,7 @@ void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, cha
             concatenateVariableSpecial(&zVar, input, p1);
         } else {
             switch(command[0]){
+            // Funções de limpeza de variável
             case 'x':
                 clearVariable(&xVar);
                 break;
@@ -111,34 +126,43 @@ void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, cha
             case 'z':
                 clearVariable(&zVar);
                 break;
+            // Configurar o diretório padrão
             case 'd':
                 setCurrentDirectory(input, &dirPointer, &defaultDirPointer, xVar, yVar, zVar);
                 break;
+            // Configurar o nome do arquivo
             case 'a':
                 setFileName(&namePointer, input, xVar, yVar, zVar);
                 break;
+            // Configurar a extensão do arquivo
             case 'e':
                 setExtension(&extPointer, input, xVar, yVar, zVar);
+            // Criar um arquivo com um ID no diretório padrão
             case 'c':
                 fscanf(input, "%d", &id);
                 createFile(files, id, &dirPointer, &namePointer, &extPointer);
                 break;
+            // Abrir um arquivo para inclusão (append)
             case 'o':
                 fscanf(input, "%d", &id);
                 openFile(files, id, &dirPointer, &namePointer, &extPointer);
                 break;
+            // Abrir um arquivo para leitura (read)
             case 'l':
                 fscanf(input, "%d", &id);
                 readFile(files, id);
-                break;
+                break;      
+            // Abrir um arquivo para escrita (write) de uma string sem aspas duplas a delimitando e terminada pelo caracter '$'
             case 'w':
                 fscanf(input, "%d", &id);
                 writeFile(input, files, id, &xVar, &yVar, &zVar);
                 break;
+            // Abrir um arquivo para leitura e armazenamento de uma linha em uma variável
             case 'r':
                 fscanf(input, "%d", &id);
                 readLineFromFile(input, files, id, &xVar, &yVar, &zVar);
                 break;
+            // Por fim, fechar um arquivo que está aberto
             case 'f':
                 fscanf(input, "%d", &id);
                 closeFile(files, id);
@@ -156,25 +180,47 @@ void doCommands(FILE *input, char *p1, char *p2, char *p3, char *dirPointer, cha
 void concatenateVariableNormal(char **var, FILE *input, char *p1, char *p2, char *p3){
     char removeLeadingWhitespace = fgetc(input);
 
+    // A função que retira o argumento dessa função
     char toBeConcatenated[STRING_MAX_SIZE];
     fgets(toBeConcatenated, STRING_MAX_SIZE, input);
-    toBeConcatenated[strcspn(toBeConcatenated, "\n")] = 0; // Limpar o caracter \n
+    
+    // Retirar o caracter '\n' (new line) do final da string
+    toBeConcatenated[strcspn(toBeConcatenated, "\n")] = 0;
 
+    // Apenas para testes, será removida posteriormente
     printf("%s\n", toBeConcatenated);
 
+    // Tamanho da variável (x, y ou z) para posterior utilização na alocação de memória
     int varSize = strlen(*var);
+    
+    // String auxiliar para cópia e posterior concatenação.
     char dummyString[STRING_MAX_SIZE];
 
+    // Comparação dos argumentos da função
     if(strcmp(toBeConcatenated, "@1") == 0){
+        // Tamanho para alocação de memória posterior
         int pSize = strlen(p1);
+        
+        // Temporário, será retirado mais tarde
         printf("varSize: %d \tpSize: %d\n", varSize, pSize);
+        
+        // Faz uma cópia da variável
         strcpy(dummyString, *var);
+        
+        // Libera toda a memória alocada para a variável e a realoca, incluindo um espaço extra para o caracter de finalização de uma string '\0'
         free(*var);
         *var = malloc((pSize + varSize + 1) * sizeof(char));
+        
+        // O processo inverso ocorre: a string auxiliar é copiada para o endereço da variável, que é concatenada com o parâmetro correspondente
         strcpy(*var, dummyString);
         strcat(*var, p1);
+        
+        // Mais uma vez, um testezinho
         printf("Test: %s\n", *var);
+        
+        // Por fim, retorna
         return;
+    // E o mesmo processo é repetido duas vezes
     } else if(strcmp(toBeConcatenated, "@2") == 0){
         int pSize = strlen(p2);
         printf("varSize: %d \tpSize: %d\n", varSize, pSize);
@@ -195,10 +241,13 @@ void concatenateVariableNormal(char **var, FILE *input, char *p1, char *p2, char
         strcat(*var, p3);
         printf("Test: %s\n", *var);
         return;
+    // Se passar por aqui, quer dizer que caímos em uma string delimitada por aspas duplas
     } else {
-        // Fun��o pra remover as aspas de uma string
+        // Criando um ponteiro que aponta para a string e removendo as suas aspas duplas
         char *p = toBeConcatenated;
         removeDoubleQuotes(&p, '\"');
+        
+        // E repetimos o mesmo processo
         int pSize = strlen(toBeConcatenated);
         strcpy(dummyString, *var);
         free(*var);
@@ -248,7 +297,7 @@ void concatenateVariableSpecial(char **var, FILE *input, char *p1){
             }
         }
     } else {
-        // Fun��o para remover as aspas de uma string
+        // Função para remover as aspas de uma string
         char *p = toBeConcatenated;
         removeDoubleQuotes(&p, '\"');
         int pSize = strlen(toBeConcatenated);
@@ -275,17 +324,16 @@ void setCurrentDirectory(FILE* input, char **path, char **defaultPath, char *x, 
     fgets(dirArg, STRING_MAX_SIZE, input);
     dirArg[strcspn(dirArg, "\n")] = 0;
 
-    if(strcmp(dirArg, "path") == 0){
-        strcpy(*path, dirArg);
-    } else if(strcmp(dirArg, "#x")){
+    if(strcmp(dirArg, "#x") == 0){
         strcpy(*path, x);
     } else if(strcmp(dirArg, "#y")){
         strcpy(*path, y);
-    } else {
-        // Unsafe
+    } else if(strcmp(dirArg, "#z")){
         strcpy(*path, z);
+    } else {
+        strcpy(*path, dirArg);
     }
-    // Fun��o para remover ocorr�ncias de barras duplas ("//")
+    // Função para remover ocorrências de barras duplas ("//")
     printf("%s\n", *path);
 }
 
